@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheet Order Importer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Sans+MS&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style type="text/css">
+        /* User-provided styles for the order form table */
+        .tg  {border-collapse:collapse;border-spacing:0; margin: 0 auto;}
+        .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+          overflow:hidden;padding:10px 5px;word-break:normal;}
+        .tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+          font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+        .tg .tg-t3rd{border-color:inherit;font-family:"Comic Sans MS", cursive, sans-serif !important;font-size:28px;font-weight:bold;
+          text-align:center;vertical-align:top}
+        .tg .tg-3aoq{border-color:inherit;font-family:"Comic Sans MS", cursive, sans-serif !important;font-weight:bold;text-align:center;
+          vertical-align:top}
+        .tg .tg-data{border-color:inherit;font-family:"Comic Sans MS", cursive, sans-serif !important;text-align:center;
+          vertical-align:top}
+        .tg .tg-kj1r{border-color:inherit;font-family:"Comic Sans MS", cursive, sans-serif !important;font-weight:bold;
+          text-align:center;vertical-align:top}
+        .tg .tg-nbml{background-color:#C0C0C0;border-color:inherit;font-family:"Comic Sans MS", cursive, sans-serif !important;
+          text-align:center;vertical-align:top}
+        
+        /* Custom styles for the page layout */
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+
+        /* A4 Preview Container for Screen */
+        .a4-preview {
+            background: white;
+            width: 21cm;
+            height: 29.7cm;
+            padding: 1.5cm;
+            margin: 0 auto;
+            border: 1px solid #d1d5db;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .print-single-btn, .pdf-single-btn, .close-preview-btn {
+            position: absolute;
+            top: 1.8cm;
+            color: white;
+            padding: 10px 14px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            z-index: 10;
+        }
+
+        .print-single-btn { right: 1.8cm; background-color: #4f46e5; }
+        .print-single-btn:hover { background-color: #4338ca; transform: scale(1.05); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+
+        .pdf-single-btn { right: calc(1.8cm + 54px); background-color: #c9302c; }
+        .pdf-single-btn:hover { background-color: #ac2925; transform: scale(1.05); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+
+        .close-preview-btn { right: calc(1.8cm + 108px); background-color: #6c757d; }
+        .close-preview-btn:hover { background-color: #5a6268; transform: scale(1.05); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        
+        .tg { width: 100% !important; }
+
+        @media print {
+            body > :not(.print-content) {
+                display: none !important;
+            }
+            .print-content {
+                display: block !important;
+                position: static !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .a4-preview {
+                width: 100% !important;
+                max-width: none !important;
+                height: auto !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+                position: static !important;
+            }
+            .print-single-btn, .pdf-single-btn, .close-preview-btn {
+                display: none !important;
+            }
+        }
+        
+        /* Enhanced UI Styles */
+        .import-btn {
+            background: linear-gradient(to right, #4f46e5, #7c3aed);
+            transition: all 0.3s ease;
+        }
+        .import-btn:hover:not(:disabled) {
+            background: linear-gradient(to right, #4338ca, #6d28d9);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(79, 70, 229, 0.25);
+        }
+        .import-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinner {
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            width: 1.25em;
+            height: 1.25em;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        /* PDF-specific styles */
+        .pdf-container {
+            width: 21cm;
+            min-height: 29.7cm;
+            padding: 1.5cm;
+            background: white;
+            box-sizing: border-box;
+            position: absolute;
+            left: -9999px; /* Hide off-screen */
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-8" id="controls">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Google Sheet Order Importer</h1>
+            <p class="text-center text-gray-500 mb-6">Paste your published sheet URL to generate a list of orders.</p>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input id="sheetUrl" type="url" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vRDysw8D-KLIzzY1gpjLBFtSIpQlNaEMnO5vpn2ddiX7UcPToZqr0tSYzpxVvEkL_c3gXQpyU7E8ASV/pub?gid=428367552&single=true&output=csv" placeholder="Paste published Google Sheet URL here" class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                <button id="importBtn" class="import-btn text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center justify-center gap-2">
+                    <i id="import-icon" class="fas fa-file-import"></i>
+                    <span id="import-spinner" class="spinner hidden"></span>
+                    <span id="import-text">Import</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="message-container" class="text-center"></div>
+        <div id="output" class="space-y-4"></div>
+    </div>
+
+    <div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50 transition-opacity duration-300">
+        <div class="bg-gray-200 p-2 sm:p-4 rounded-lg shadow-2xl w-full max-w-[24cm] max-h-[95vh] overflow-auto relative" id="modal-content-wrapper">
+             <div id="modal-body">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const importBtn = document.getElementById('importBtn');
+        const sheetUrlInput = document.getElementById('sheetUrl');
+        const outputContainer = document.getElementById('output');
+        const messageContainer = document.getElementById('message-container');
+        const modal = document.getElementById('preview-modal');
+        const modalBody = document.getElementById('modal-body');
+
+        let allOrdersData = [];
+
+        function showLoading(isLoading) {
+            document.getElementById('import-text').textContent = isLoading ? 'Importing...' : 'Import';
+            document.getElementById('import-icon').classList.toggle('hidden', isLoading);
+            document.getElementById('import-spinner').classList.toggle('hidden', !isLoading);
+            importBtn.disabled = isLoading;
+        }
+
+        function openPreviewModal(orderIndex) {
+            const orderData = allOrdersData[orderIndex];
+            if (!orderData) return;
+            const orderTableNode = generateOrderTable(orderData, orderIndex + 1);
+            modalBody.innerHTML = '';
+            modalBody.appendChild(orderTableNode);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closePreviewModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            modalBody.innerHTML = '';
+        }
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closePreviewModal();
+            }
+        });
+
+        function printSingleOrder(orderNum) {
+            const printElement = document.getElementById(`a4-preview-${orderNum}`);
+            if (!printElement) return;
+
+            const printClone = printElement.cloneNode(true);
+            printClone.classList.add('print-content');
+
+            const originalBodyElements = Array.from(document.body.children);
+
+            originalBodyElements.forEach(el => {
+                if (el.tagName !== 'SCRIPT') {
+                    el.style.display = 'none';
+                }
+            });
+
+            document.body.appendChild(printClone);
+            
+            setTimeout(() => {
+                window.print();
+                document.body.removeChild(printClone);
+                originalBodyElements.forEach(el => {
+                    el.style.display = '';
+                });
+            }, 250);
+        }
+        
+        // =========================================================================
+        // == FIXED PDF FUNCTION - NO MORE BLANK PAGES                      ==
+        // =========================================================================
+        function downloadSinglePDF(orderNum) {
+            const previewElement = document.getElementById(`a4-preview-${orderNum}`);
+            if (!previewElement) {
+                console.error('Preview element not found');
+                return;
+            }
+
+            const content = previewElement.querySelector('.tg-container');
+            if (!content) {
+                console.error('Content element not found');
+                return;
+            }
+
+            const customerNameCell = previewElement.querySelector('.customer-name-cell');
+            const customerName = customerNameCell ? customerNameCell.textContent.trim() : 'Order';
+            const filename = `${customerName.replace(/ /g, '_')}-${orderNum}.pdf`;
+
+            const opt = {
+                margin: 1.5,
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    logging: true,
+                    scrollX: 0,
+                    scrollY: 0
+                },
+                jsPDF: { 
+                    unit: 'cm', 
+                    format: 'a4', 
+                    orientation: 'portrait'
+                }
+            };
+
+            html2pdf().set(opt).from(content).save().catch(error => {
+                console.error('PDF generation failed:', error);
+                displayMessage('PDF generation failed. Please try again.', 'error');
+            });
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        async function fetchWithFallbacks(csvUrl) {
+            const proxies = ['https://api.allorigins.win/raw?url=', 'https://thingproxy.freeboard.io/fetch/'];
+            for (let i = 0; i < proxies.length; i++) {
+                const urlToFetch = proxies[i].includes('thingproxy') ? csvUrl : encodeURIComponent(csvUrl);
+                const fetchUrl = proxies[i] + urlToFetch;
+                displayMessage(`Attempting import via service #${i + 1}...`, 'loading');
+                try {
+                    const response = await fetch(fetchUrl);
+                    if (!response.ok) throw new Error(`Service #${i + 1} failed with status: ${response.statusText}`);
+                    return await response.text();
+                } catch (error) {
+                    console.error(error);
+                    if (i === proxies.length - 1) throw new Error("All import services failed. Please try again later.");
+                }
+            }
+        }
+
+        importBtn.addEventListener('click', async () => {
+            const userUrl = sheetUrlInput.value.trim();
+            if (!userUrl) {
+                displayMessage('Please paste a Google Sheet URL.', 'error');
+                return;
+            }
+
+            const csvUrl = userUrl.replace('/pubhtml', '/pub?output=csv');
+            outputContainer.innerHTML = '';
+            showLoading(true);
+
+            try {
+                const csvText = await fetchWithFallbacks(csvUrl);
+
+                if (!csvText || !csvText.trim()) throw new Error("Received empty data. Check URL or sheet publication status.");
+                if (csvText.trim().toLowerCase().includes('<html')) {
+                    displayMessage('Import Failed: The URL seems to be a webpage. Please use the "Publish to web" CSV link.', 'error');
+                    return;
+                }
+
+                allOrdersData = parseCSV(csvText);
+                
+                if (allOrdersData.length === 0) {
+                     displayMessage('No orders found in the sheet after the header row.', 'error');
+                     return;
+                }
+
+                displayMessage(`Successfully imported ${allOrdersData.length} orders.`, 'success');
+                renderOrderList(allOrdersData);
+
+            } catch (error) {
+                console.error('Final Fetch Error:', error);
+                displayMessage(`Failed to fetch data. ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        function renderOrderList(orders) {
+            outputContainer.innerHTML = `<h2 class="text-xl font-bold text-gray-700 px-1">Imported Orders</h2>`;
+            orders.forEach((order, index) => {
+                const customerName = order['Customer Name'] || 'N/A';
+                const timestamp = order['Timestamp'] || order['Time Stamp'] || 'No Date';
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow duration-300 flex justify-between items-center';
+                card.innerHTML = `
+                    <div>
+                        <p class="font-bold text-lg text-gray-800">${customerName}</p>
+                        <p class="text-sm text-gray-500">Order #${index + 1} &bull; ${timestamp}</p>
+                    </div>
+                    <button onclick="openPreviewModal(${index})" class="bg-indigo-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors">
+                        View Details
+                    </button>
+                `;
+                outputContainer.appendChild(card);
+            });
+        }
+
+        function displayMessage(message, type) {
+            messageContainer.innerHTML = '';
+            const p = document.createElement('p');
+            p.textContent = message;
+            p.className = `font-bold p-4 rounded-md ${type === 'error' ? 'text-red-700 bg-red-100' : type === 'success' ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`;
+            messageContainer.appendChild(p);
+            if (type !== 'loading') {
+                setTimeout(() => { messageContainer.innerHTML = ''}, 8000);
+            }
+        }
+        
+        function parseCSV(text) {
+            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) return [];
+            const parseLine = line => {
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; } else { inQuotes = !inQuotes; }
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current);
+                        current = '';
+                    } else { current += char; }
+                }
+                values.push(current);
+                return values.map(v => v.trim().replace(/^"|"$/g, ''));
+            };
+            const headers = parseLine(lines[0]);
+            return lines.slice(1).map(line => {
+                const values = parseLine(line);
+                const obj = {};
+                headers.forEach((header, i) => { if (header) obj[header] = values[i] || ''; });
+                return obj;
+            });
+        }
+
+        function generateOrderTable(orderData, orderNum) {
+            const normalizedOrderData = {};
+            for (const key in orderData) { normalizedOrderData[key.toLowerCase().trim()] = orderData[key]; }
+            const getData = (key) => normalizedOrderData[key.toLowerCase()] || '';
+            const getTimestamp = () => {
+                const possibleKeys = ['timestamp', 'time stamp', 'date'];
+                for (const key of possibleKeys) { if (normalizedOrderData[key]) return normalizedOrderData[key]; }
+                return '';
+            };
+            const timestamp = getTimestamp();
+            const items = [];
+            let grandTotal = 0;
+            const keys = Object.keys(normalizedOrderData);
+            const itemKeys = keys.filter(k => k.startsWith('item') || k.startsWith('product')).sort((a, b) => (parseInt(a.replace(/[^0-9]/g, '') || 0) - parseInt(b.replace(/[^0-9]/g, '') || 0)));
+            
+            for (const itemKey of itemKeys) {
+                const itemName = normalizedOrderData[itemKey];
+                const numberSuffix = itemKey.replace(/[^0-9]/g, '');
+                const amountKey = keys.find(k => (k.startsWith('amount') || k.startsWith('price') || k.startsWith('cost')) && k.replace(/[^0-9]/g, '') === numberSuffix);
+                if (itemName && itemName.trim() !== '') {
+                    const amount = amountKey ? parseFloat(normalizedOrderData[amountKey]) || 0 : 0;
+                    items.push({ name: itemName, amount: amount });
+                    grandTotal += amount;
+                }
+            }
+
+            const rowsPerColumn = 13;
+            let totalCol1 = items.slice(0, rowsPerColumn).reduce((sum, item) => sum + item.amount, 0);
+            let totalCol2 = items.slice(rowsPerColumn, rowsPerColumn * 2).reduce((sum, item) => sum + item.amount, 0);
+            
+            let itemRowsHtml = '';
+            for (let i = 0; i < rowsPerColumn; i++) {
+                const itemCol1 = items[i];
+                const itemCol2 = items[i + rowsPerColumn];
+                itemRowsHtml += `<tr>
+                    <td class="tg-data">${itemCol1 ? itemCol1.name : ''}</td>
+                    <td class="tg-data">${itemCol1 && itemCol1.amount > 0 ? itemCol1.amount.toFixed(2) : ''}</td>
+                    <td class="tg-data">${itemCol2 ? itemCol2.name : ''}</td>
+                    <td class="tg-data">${itemCol2 && itemCol2.amount > 0 ? itemCol2.amount.toFixed(2) : ''}</td>
+                </tr>`;
+            }
+            
+            const orderEntryWrapper = document.createElement('div');
+            orderEntryWrapper.className = "a4-preview";
+            orderEntryWrapper.id = `a4-preview-${orderNum}`;
+            orderEntryWrapper.innerHTML = `
+                <button class="close-preview-btn" title="Close Preview" onclick="closePreviewModal()"><i class="fas fa-times"></i></button>
+                <button class="pdf-single-btn" title="Download as PDF" onclick="downloadSinglePDF(${orderNum})"><i class="fas fa-file-pdf"></i></button>
+                <button class="print-single-btn" title="Print this order" onclick="printSingleOrder(${orderNum})"><i class="fas fa-print"></i></button>
+                <div class="tg-container">
+                    <table class="tg">
+                        <colgroup><col style="width: 38%"><col style="width: 12%"><col style="width: 38%"><col style="width: 12%"></colgroup>
+                        <thead><tr><th class="tg-t3rd" colspan="4">LUXMI STORE</th></tr></thead>
+                        <tbody>
+                            <tr><td class="tg-t3rd" colspan="4">ORDER FORM</td></tr>
+                            <tr>
+                                <td class="tg-3aoq">TIME STAMP</td><td class="tg-data">${timestamp}</td>
+                                <td class="tg-3aoq">DELIVERY OPTION</td><td class="tg-data">${getData('Delivery Option')}</td>
+                            </tr>
+                            <tr>
+                                <td class="tg-3aoq">CUSTOMER NAME</td><td class="tg-data customer-name-cell">${getData('Customer Name')}</td>
+                                <td class="tg-3aoq">ADDRESS</td><td class="tg-data">${getData('Address')}</td>
+                            </tr>
+                            <tr>
+                                <td class="tg-3aoq">PHONE</td><td class="tg-data">${getData('Phone')}</td>
+                                <td class="tg-3aoq">CITY</td><td class="tg-data">${getData('City')}</td>
+                            </tr>
+                            <tr>
+                                <td class="tg-3aoq">EMAIL</td><td class="tg-data">${getData('Email')}</td>
+                                <td class="tg-3aoq">PINCODE</td><td class="tg-data">${getData('Pincode')}</td>
+                            </tr>
+                            <tr>
+                                <td class="tg-3aoq">ITEM NAME</td><td class="tg-3aoq">AMOUNT</td>
+                                <td class="tg-3aoq">ITEM NAME</td><td class="tg-3aoq">AMOUNT</td>
+                            </tr>
+                            ${itemRowsHtml}
+                            <tr>
+                                <td class="tg-3aoq">TOTAL</td><td class="tg-kj1r">${totalCol1 > 0 ? totalCol1.toFixed(2) : ''}</td>
+                                <td class="tg-3aoq">TOTAL</td><td class="tg-kj1r">${totalCol2 > 0 ? totalCol2.toFixed(2) : ''}</td>
+                            </tr>
+                            <tr>
+                                <td class="tg-nbml" colspan="2">GRAND TOTAL</td>
+                                <td class="tg-nbml" colspan="2">${grandTotal > 0 ? grandTotal.toFixed(2) : ''}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>`;
+            return orderEntryWrapper;
+        }
+
+        // MODIFICATION 2: Added this block to auto-click the import button when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('importBtn').click();
+        });
+    </script>
+</body>
+</html>
